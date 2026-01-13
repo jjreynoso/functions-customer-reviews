@@ -12,6 +12,10 @@ namespace ContentModeratorFunction
         /// Timer-triggered function that uses Apache Spark concepts to analyze review patterns
         /// Runs daily at midnight
         /// This function demonstrates Spark-style data processing integration
+        /// 
+        /// Note: The SQL query retrieves all documents to demonstrate Spark-style processing
+        /// where data is filtered and transformed in-memory (or in Spark clusters in production).
+        /// For smaller datasets or non-Spark scenarios, consider filtering at query level.
         /// </summary>
         [FunctionName("AnalyzeReviewsWithSpark")]
         public static void Run(
@@ -33,7 +37,10 @@ namespace ContentModeratorFunction
                 var reviewData = reviews.ToList();
                 
                 // Filter by date if configured
-                var daysAgo = int.Parse(Environment.GetEnvironmentVariable("DaysAgo") ?? "7");
+                if (!int.TryParse(Environment.GetEnvironmentVariable("DaysAgo"), out int daysAgo))
+                {
+                    daysAgo = 7; // Default to 7 days if not configured or invalid
+                }
                 var cutoffDate = DateTime.UtcNow.AddDays(-daysAgo);
                 reviewData = reviewData.Where(r => r.CreatedAt >= cutoffDate).ToList();
                 
@@ -87,6 +94,10 @@ namespace ContentModeratorFunction
             };
         }
 
+        /// <summary>
+        /// Represents a review document from CosmosDB for Spark processing
+        /// This is a specific model for Spark analytics to ensure type safety and testability
+        /// </summary>
         public class ReviewDocument
         {
             public string Id { get; set; }
