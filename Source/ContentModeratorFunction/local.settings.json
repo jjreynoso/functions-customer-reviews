@@ -6,7 +6,8 @@
     "ContentModerationApiKey": "__ContentModerationApiKey__",
     "customerReviewDataDocDB": "__customerReviewDataDocDB__",
     "APPINSIGHTS_INSTRUMENTATIONKEY": "__APPINSIGHTS_INSTRUMENTATIONKEY__",
-    "queue-name": "review-queue"
+    "queue-name": "review-queue",
+    "DaysAgo": "7"
   },
   "ConnectionStrings": {}
 }
