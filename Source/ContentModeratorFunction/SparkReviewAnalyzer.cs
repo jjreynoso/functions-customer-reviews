@@ -20,7 +20,7 @@ namespace ContentModeratorFunction
                 databaseName: "customerReviewData",
                 collectionName: "reviews",
                 ConnectionStringSetting = "customerReviewDataDocDB",
-                SqlQuery = "SELECT * FROM c WHERE c._ts >= {DaysAgo}")]
+                SqlQuery = "SELECT * FROM c")]
                 IEnumerable<ReviewDocument> reviews,
             ILogger log)
         {
@@ -32,7 +32,12 @@ namespace ContentModeratorFunction
                 // In production, this would connect to Azure Databricks or HDInsight
                 var reviewData = reviews.ToList();
                 
-                log.LogInformation($"Processing {reviewData.Count} reviews with Spark analytics");
+                // Filter by date if configured
+                var daysAgo = int.Parse(Environment.GetEnvironmentVariable("DaysAgo") ?? "7");
+                var cutoffDate = DateTime.UtcNow.AddDays(-daysAgo);
+                reviewData = reviewData.Where(r => r.CreatedAt >= cutoffDate).ToList();
+                
+                log.LogInformation($"Processing {reviewData.Count} reviews from the last {daysAgo} days with Spark analytics");
 
                 // Perform analytics on the review data
                 var analytics = AnalyzeReviewData(reviewData);
@@ -53,7 +58,7 @@ namespace ContentModeratorFunction
             }
         }
 
-        private static ReviewAnalytics AnalyzeReviewData(List<ReviewDocument> reviews)
+        public static ReviewAnalytics AnalyzeReviewData(List<ReviewDocument> reviews)
         {
             // Spark-style distributed processing pattern
             // This demonstrates the data processing approach that would be used with Apache Spark
@@ -65,9 +70,12 @@ namespace ContentModeratorFunction
             var totalReviews = reviews.Count;
             var approvedCount = reviews.Count(r => r.IsApproved);
             var rejectedCount = totalReviews - approvedCount;
-            var avgCaptionLength = reviews
-                .Where(r => !string.IsNullOrEmpty(r.Caption))
-                .Average(r => r.Caption?.Length ?? 0);
+            
+            // Calculate average caption length, handling empty sequences
+            var reviewsWithCaptions = reviews.Where(r => !string.IsNullOrEmpty(r.Caption)).ToList();
+            var avgCaptionLength = reviewsWithCaptions.Any() 
+                ? reviewsWithCaptions.Average(r => r.Caption.Length) 
+                : 0.0;
 
             return new ReviewAnalytics
             {
