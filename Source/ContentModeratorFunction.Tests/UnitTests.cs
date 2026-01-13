@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
@@ -52,6 +53,52 @@ namespace ContentModeratorFunction.Tests
 
                 Assert.IsTrue(response.Item1);
             }
+        }
+
+        [TestMethod]
+        public void TestSparkReviewAnalytics()
+        {
+            // Test the Spark analytics with sample data
+            var reviews = new List<SparkReviewAnalyzer.ReviewDocument>
+            {
+                new SparkReviewAnalyzer.ReviewDocument
+                {
+                    Id = "1",
+                    IsApproved = true,
+                    Caption = "a small cat sitting on a couch",
+                    ReviewText = "Great product!",
+                    CreatedAt = DateTime.UtcNow.AddDays(-1)
+                },
+                new SparkReviewAnalyzer.ReviewDocument
+                {
+                    Id = "2",
+                    IsApproved = false,
+                    Caption = "a small dog sitting on a couch",
+                    ReviewText = "Not what I expected",
+                    CreatedAt = DateTime.UtcNow.AddDays(-2)
+                },
+                new SparkReviewAnalyzer.ReviewDocument
+                {
+                    Id = "3",
+                    IsApproved = true,
+                    Caption = "a large cat sleeping",
+                    ReviewText = "Perfect!",
+                    CreatedAt = DateTime.UtcNow.AddDays(-3)
+                }
+            };
+
+            // Call the private method via reflection to test analytics logic
+            var method = typeof(SparkReviewAnalyzer).GetMethod("AnalyzeReviewData", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            var result = method.Invoke(null, new object[] { reviews }) as SparkReviewAnalyzer.ReviewAnalytics;
+
+            // Verify analytics results
+            Assert.IsNotNull(result);
+            Assert.AreEqual(3, result.TotalReviews);
+            Assert.AreEqual(2, result.ApprovedCount);
+            Assert.AreEqual(1, result.RejectedCount);
+            Assert.AreEqual(0.6666, result.ApprovalRate, 0.001);
+            Assert.IsTrue(result.AvgCaptionLength > 0);
         }
     }
 }
